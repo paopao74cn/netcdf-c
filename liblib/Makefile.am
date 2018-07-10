@@ -64,6 +64,11 @@ AM_CPPFLAGS += -I${top_srcdir}/libdap4
 libnetcdf_la_LIBADD += ${top_builddir}/libdap4/libdap4.la
 endif # ENABLE_DAP4
 
+if ENABLE_CLOUD
+AM_CPPFLAGS += -I${top_srcdir}/libcloud
+libnetcdf_la_LIBADD += ${top_builddir}/libcloud/libnncloud.la
+endif # ENABLE_CLOUD
+
 # NetCDF-4 ...
 if USE_NETCDF4
 

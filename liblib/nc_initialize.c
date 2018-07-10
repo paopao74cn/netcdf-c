@@ -41,6 +41,11 @@ extern int NC_HDF4_initialize(void);
 extern int NC_HDF4_finalize(void);
 #endif
 
+#ifdef ENABLE_CLOUD
+extern int NCCS_initialize(void);
+extern int NCCS_finalize(void);
+#endif
+
 #ifdef _MSC_VER
 #include <io.h>
 #include <fcntl.h>
@@ -92,6 +97,9 @@ nc_initialize()
 #ifdef USE_HDF4
     if((stat = NC_HDF4_initialize())) goto done;
 #endif
+#ifdef ENABLE_CLOUD
+    if((stat = NCCS_initialize())) goto done;
+#endif
 #ifdef USE_NETCDF4
     if((stat = NC4_initialize())) goto done;
     stat = NC4_fileinfo_init();
@@ -135,6 +143,10 @@ nc_finalize(void)
 #ifdef USE_HDF4
     if((stat = NC_HDF4_finalize())) return stat;
 #endif /* USE_HDF4 */
+
+#ifdef ENABLE_CLOUD
+    if((stat = NCCS_finalize())) return stat;
+#endif
 
 #ifdef USE_NETCDF4
     if((stat = NC4_finalize())) return stat;

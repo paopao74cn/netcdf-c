@@ -331,10 +331,19 @@ AC_MSG_RESULT($enable_dap)
 # --enable-dap => enable-dap4
 enable_dap4=$enable_dap
 
+## Check for enabling cloud storage
+AC_MSG_CHECKING([whether cloud storage client(s) are to be built])
+AC_ARG_ENABLE([cloud],
+                 [AS_HELP_STRING([--enable-cloud],
+                                 [build with cloud client support.])])
+test "x$enable_cloud" = xyes || enable_dap=no
+AC_MSG_RESULT($enable_cloud)
+
 # Curl support is required if and only if any of these flags are set:
 # 1. --enable-dap
+# 1. --enable-cloud
 
-if test "x$enable_dap" = "xyes" ; then
+if test "x$enable_dap" = "xyes" || test "x$enable_cloud" = "xyes" ; then
 require_curl=yes
 else
 require_curl=no
@@ -820,6 +829,16 @@ if test "x$enable_dap4" = xyes; then
    AC_DEFINE([ENABLE_DAP4], [1], [if true, build DAP4 Client])
 fi
 
+# disable cloud if netcdf-4 is disabled
+if test "x$enable_netcdf_4" = "xno" ; then
+    AC_MSG_WARN([netcdf-4 not enabled; disabling cloud storage])
+    enable_cloud=no
+fi
+
+if test "x$enable_cloud" = xyes; then
+   AC_DEFINE([ENABLE_CLOUD], [1], [if true, build cloud storage Client])
+fi
+
 # check for useful, but not essential, memio support
 AC_CHECK_FUNCS([memmove getpagesize sysconf])
 
@@ -1243,6 +1262,7 @@ AM_CONDITIONAL(USE_DAP, [test "x$enable_dap" = xyes]) # Alias
 # Provide protocol specific flags
 AM_CONDITIONAL(ENABLE_DAP, [test "x$enable_dap" = xyes])
 AM_CONDITIONAL(ENABLE_DAP4, [test "x$enable_dap4" = xyes])
+AM_CONDITIONAL(ENABLE_CLOUD, [test "x$enable_cloud" = xyes])
 AM_CONDITIONAL(USE_STRICT_NULL_BYTE_HEADER_PADDING, [test x$enable_strict_null_byte_header_padding = xyes])
 AM_CONDITIONAL(ENABLE_CDF5, [test "x$enable_cdf5" = xyes])
 AM_CONDITIONAL(ENABLE_DAP_REMOTE_TESTS, [test "x$enable_dap_remote_tests" = xyes])
@@ -1383,6 +1403,7 @@ AC_SUBST(NC_LIBS,[$NC_LIBS])
 AC_SUBST(HAS_DAP,[$enable_dap])
 AC_SUBST(HAS_DAP2,[$enable_dap])
 AC_SUBST(HAS_DAP4,[$enable_dap4])
+AC_SUBST(HAS_CLOUD,[$enable_cloud])
 AC_SUBST(HAS_NC2,[$nc_build_v2])
 AC_SUBST(HAS_NC4,[$enable_netcdf_4])
 AC_SUBST(HAS_CDF5,[$enable_cdf5])
@@ -1458,6 +1479,7 @@ AX_SET_META([NC_HAS_HDF5],[$enable_netcdf_4],[yes])
 AX_SET_META([NC_HAS_SZIP],[$ac_cv_func_H5Z_SZIP],[yes])
 AX_SET_META([NC_HAS_DAP2],[$enable_dap],[yes])
 AX_SET_META([NC_HAS_DAP4],[$enable_dap4],[yes])
+AX_SET_META([NC_HAS_cloud],[$enable_cloud],[yes])
 AX_SET_META([NC_HAS_DISKLESS],[yes],[yes])
 AX_SET_META([NC_HAS_MMAP],[$enable_mmap],[yes])
 AX_SET_META([NC_HAS_JNA],[$enable_jna],[yes])
@@ -1513,6 +1535,7 @@ AC_CONFIG_FILES([Makefile
                  libdap2/Makefile
                  libdap4/Makefile
                  libhdf4/Makefile
+                 libcloud/Makefile
                  libdispatch/Makefile
                  liblib/Makefile
                  ncdump/cdl/Makefile
@@ -1527,6 +1550,7 @@ AC_CONFIG_FILES([Makefile
                  ncdap_test/expected3/Makefile
                  ncdap_test/expectremote3/Makefile
                  dap4_test/Makefile
+                 cloud_test/Makefile
                  plugins/Makefile
                  ],
                  [test -f  nc-config && chmod 755 nc-config])

@@ -8,6 +8,7 @@ DB=1
 
 HDF5=1
 DAP=1
+CLOUD=1
 #SZIP=1
 #HDF4=1
 #PNETCDF=1
@@ -80,7 +81,7 @@ LDFLAGS="$LDFLAGS -lsz -laec"
 fi
 
 export PKG_CONFIG_PATH=/usr/lib/pkgconfig
-if test "x$DAP" = "x1" ; then
+if test "x$DAP" = "x1" || test "x$CLOUD" = x1; then
 if curl-config --version >/dev/null ; then
 TMP=`curl-config --cflags`
 CPPFLAGS="$TMP $CPPFLAGS"
@@ -110,7 +111,6 @@ FLAGS="$FLAGS --enable-extreme-numbers"
 #FLAGS="$FLAGS --enable-dap-auth-tests" -- requires a new remotetest server
 #FLAGS="$FLAGS --enable-doxygen --enable-internal-docs"
 FLAGS="$FLAGS --enable-logging"
-FLAGS="$FLAGS --disable-diskless"
 #FLAGS="$FLAGS --enable-mmap"
 #FLAGS="$FLAGS --with-udunits"
 #FLAGS="$FLAGS --with-libcf"
@@ -161,6 +161,10 @@ FLAGS="$FLAGS --enable-hdf4 --enable-hdf4-file-tests"
 fi
 if test "x$DAP" = "x" ; then
 FLAGS="$FLAGS --disable-dap"
+fi
+
+if test "x$CLOUD" = "x1" ; then
+FLAGS="$FLAGS --enable-cloud"
 fi
 
 if test "x$MPIO" = x1 ; then

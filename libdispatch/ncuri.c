@@ -641,6 +641,53 @@ ncuriquerylookup(NCURI* uri, const char* key)
   return value;
 }
 
+/*! Get the number of query|fragment parameters.
+    The which flag is NCURIQUERY|NCURIFRAG
+    Returns the number of parameters in the specified list.
+*/
+int
+ncuriparamcount(NCURI* uri, int which)
+{
+    int i;
+    char** p;
+    if(uri == NULL) return 0;
+    if(which == NCURIQUERY) p = uri->querylist;
+    else if(which == NCURIFRAG) p = uri->fraglist;
+    else return 0;
+    if(p == NULL) return 0;
+    i = 0;
+    for(;*p;p+=2) i++;
+    return i;
+}
+
+/*! Get the i'th parameter in query|fragment parameter list.
+    "which" arg is NCURIQUERY|NCURIFRAG.
+    "paramp" arg is pointer to name of the i'th parameter
+    "valuep" arg is pointer to value of the i'th parameter
+    Returns NC_EINVAL if i is out of range or for other errors,
+    return NC_NOERR otherwise.
+*/
+int
+ncuriparamith(NCURI* uri, int which, int index, const char** paramp, const char** valuep)
+{
+    int j;
+    char** p;
+    if(uri == NULL || index < 0) goto fail;
+    if(which == NCURIQUERY) p = uri->querylist;
+    else if(which == NCURIFRAG) p = uri->fraglist;
+    else goto fail;
+    if(p == NULL) goto fail;
+    for(j=0;*p;p+=2) {
+	if(j == index) {
+	    if(paramp) *paramp = *p;
+	    if(valuep) *valuep = p[1];
+	    return NC_NOERR;
+	}
+    }
+fail:
+    return NC_EINVAL;
+}
+
 #if 0
 int
 ncuriremoveparam(NCURI* uri, const char* key)
@@ -660,7 +707,6 @@ ncuriremoveparam(NCURI* uri, const char* key)
     return NCU_OK;
 }
 #endif
-
 
 /* Internal version of lookup; returns the paired index of the key;
    case insensitive

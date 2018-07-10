@@ -786,9 +786,24 @@ IF(ENABLE_DAP)
     SET(ENABLE_DAP4 OFF CACHE BOOL "")
   ENDIF(ENABLE_NETCDF_4)
 
+ELSE()
+  SET(ENABLE_DAP2 OFF)
+  SET(ENABLE_DAP4 OFF)
+ENDIF()
+
+# Option to Build Cloud Storage Clients
+OPTION(ENABLE_CLOUD "Enable Cloud Storage." OFF)
+IF(ENABLE_CLOUD)
+  SET(ENABLE_CLOUD ON CACHE BOOL "")
+  IF(NOT ENABLE_NETCDF_4)
+    SET(ENABLE_CLOUD OFF CACHE BOOL "")
+  ENDIF()
+ENDIF()
+
+IF(ENABLE_DAP2 OR ENABLE_DAP4 OR ENABLE_CLOUD)
   FIND_PACKAGE(CURL)
   IF(NOT CURL_LIBRARY)
-    MESSAGE(FATAL_ERROR "DAP Support specified, CURL libraries are not found.")
+    MESSAGE(FATAL_ERROR "DAP|Cloud Support specified, CURL libraries are not found.")
   ENDIF()
 
   ADD_DEFINITIONS(-DCURL_STATICLIB=1)
@@ -823,12 +838,7 @@ IF(ENABLE_DAP)
   CHECK_C_SOURCE_COMPILES("
   #include <curl/curl.h>
   int main() {int x = CURLINFO_HTTP_CONNECTCODE;}" HAVE_CURLINFO_HTTP_CONNECTCODE)
-
-ELSE()
-  SET(ENABLE_DAP2 OFF)
-  SET(ENABLE_DAP4 OFF)
 ENDIF()
-
 
 # Check for the math library so it can be explicitly linked.
 IF(NOT WIN32)
@@ -1521,6 +1531,7 @@ MACRO(print_conf_summary)
   MESSAGE(STATUS "Building netCDF-4:             ${ENABLE_NETCDF_4}")
   MESSAGE(STATUS "Building DAP2 Support:         ${ENABLE_DAP2}")
   MESSAGE(STATUS "Building DAP4 Support:         ${ENABLE_DAP4}")
+  MESSAGE(STATUS "Building Cloud Storage:        ${ENABLE_CLOUD}")
   MESSAGE(STATUS "Building Utilities:            ${BUILD_UTILITIES}")
   IF(CMAKE_PREFIX_PATH)
     MESSAGE(STATUS "CMake Prefix Path:             ${CMAKE_PREFIX_PATH}")
@@ -1676,6 +1687,10 @@ IF(ENABLE_DAP4)
   ADD_SUBDIRECTORY(libdap4)
 ENDIF()
 
+IF(ENABLE_CLOUD)
+  ADD_SUBDIRECTORY(libcloud)
+ENDIF()
+
 add_subdirectory(liblib)
 
 # For tests and utilities, we are no longer
@@ -1708,6 +1723,9 @@ IF(ENABLE_TESTS)
   ENDIF()
   IF(ENABLE_DAP4)
     ADD_SUBDIRECTORY(dap4_test)
+  ENDIF()
+  IF(ENABLE_CLOUD)
+    ADD_SUBDIRECTORY(cloud_test)
   ENDIF()
   IF(ENABLE_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
@@ -1867,6 +1885,7 @@ is_enabled(ENABLE_PARALLEL4 HAS_PARALLEL4)
 is_enabled(ENABLE_DAP HAS_DAP)
 is_enabled(ENABLE_DAP HAS_DAP2)
 is_enabled(ENABLE_DAP4 HAS_DAP4)
+is_enabled(ENABLE_CLOUD HAS_CLOUD)
 is_enabled(ENABLE_DISKLESS HAS_DISKLESS)
 is_enabled(USE_MMAP HAS_MMAP)
 is_enabled(JNA HAS_JNA)

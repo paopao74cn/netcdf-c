@@ -80,6 +80,22 @@ extern const char* ncurilookup(NCURI*, const char* param);
 */
 extern const char* ncuriquerylookup(NCURI*, const char* param);
 
+
+/*! Get the number of query|fragment parameters.
+    The which flag is NCURIQUERY|NCURIFRAG
+    Returns the number of parameters in the specified list.
+*/
+extern int ncuriparamcount(NCURI*, int which);
+
+/*! Get the i'th parameter in query|fragment parameter list.
+    "which" arg is NCURIQUERY|NCURIFRAG.
+    "i" arg is parameter to get
+    "paramp" arg is pointer to name of the i'th parameter
+    "valuep" arg is pointer to value of the i'th parameter
+    Returns NC_EINVAL if i is out of range, return NC_NOERR otherwise.
+*/
+extern int ncuriparamith(NCURI*, int which, int i, const char** paramp, const char** valuep);
+
 /* URL Encode/Decode */
 extern char* ncuridecode(char* s);
 /* Partial decode */

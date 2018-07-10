@@ -29,7 +29,7 @@ ptrdiff_t nc_ptrdiffvector1[NC_MAX_VAR_DIMS];
 size_t NC_coord_zero[NC_MAX_VAR_DIMS];
 size_t NC_coord_one[NC_MAX_VAR_DIMS];
 
-/* Define the known protocols and their manipulations */
+/* Define the known protocols and their models */
 static struct NCPROTOCOLLIST {
     char* protocol;
     char* substitute;
@@ -40,9 +40,18 @@ static struct NCPROTOCOLLIST {
     {"file",NULL,0},
     {"dods","http",NC_FORMATX_DAP2},
     {"dodss","https",NC_FORMATX_DAP2},
-    {"dap4","http",NC_FORMATX_DAP4},
-    {"dap4s","https",NC_FORMATX_DAP4},
     {NULL,NULL,0} /* Terminate search */
+};
+
+/* Define the known protocols fragment flags and their models */
+static struct NCMODELLIST {
+    char* name;
+    int   model;
+} ncmodellist[] = {
+    {"dap2",NC_FORMATX_DAP2},
+    {"dap4",NC_FORMATX_DAP4},
+    {"zarr",NC_FORMATX_CLOUD},
+    {NULL,0} /* Terminate search */
 };
 
 NCRCglobalstate ncrc_globalstate;
@@ -182,6 +191,19 @@ NC_testurl(const char* path)
 }
 
 /*
+Attempt to convert a protocol name to a format
+*/
+static int
+protocolmap(const char* name)
+{
+    const struct NCMODELLIST* p;
+    for(p=ncmodellist;p->name;p++) {
+	if(strcasecmp(p->name,name)==0) return p->model;
+    }
+    return 0;
+}
+
+/*
 Return an NC_FORMATX_... value.
 Assumes that the path is known to be a url
 */
@@ -220,27 +242,25 @@ NC_urlmodel(const char* path, int mode, char** newurl)
     } else
 	goto fail; /* Again, does not look like a url */
 
-    if(model != NC_FORMATX_DAP2 && model != NC_FORMATX_DAP4) {
-        /* Look for and of the following params:
-  	   "dap2", "protocol=dap2", "dap4", "protocol=dap4" */
-	const char* proto = NULL;
-	const char* match = NULL;
-	if((proto=ncurilookup(url,"protocol")) == NULL) proto = NULL;
-	if(proto == NULL) proto = "";
-	if((match=ncurilookup(url,"dap2")) != NULL || strcmp(proto,"dap2") == 0)
-            model = NC_FORMATX_DAP2;
-	else if((match=ncurilookup(url,"dap4")) != NULL || strcmp(proto,"dap4") == 0)
-            model = NC_FORMATX_DAP4;
-	else 
-	model = 0; /* Still don't know */
+    if(model == 0) {
+	/* iterate over the available fragment flags */
+	int i;
+	int count = ncuriparamcount(url,NCURIFRAG);
+	for(i=0;i<count;i++) {
+	    const char* param;
+	    const char* value;
+	    if(ncuriparamith(url,NCURIFRAG,i,&param,&value) != NC_NOERR)
+		break;
+	    if((model = protocolmap(param)) != 0) break;
+	    if((strcasecmp("proto",param)==0
+               || strcasecmp("protocol",param)==0)
+	       && (model = protocolmap(value)) != 0) break;
+	    /* else ignore */
+	    if(model != 0) break;
+	}		
     }
-    if(model == 0) {/* Last resort: use the mode */
-        /* If mode specifies netcdf-4, then this is assumed to be dap4 */
-        if(mode & NC_NETCDF4)
-	    model = NC_FORMATX_DAP4;
-        else
-            model = NC_FORMATX_DAP2; /* Default */
-    }
+    if(model == 0) /* Default to DAP2 */
+        model = NC_FORMATX_DAP2;
     if(newurl)
 	*newurl = ncuribuild(url,NULL,NULL,NCURIALL);
     if(url) ncurifree(url);

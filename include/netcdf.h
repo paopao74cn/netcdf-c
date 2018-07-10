@@ -113,17 +113,33 @@ extern "C" {
 #define NC_FILL         0       /**< Argument to nc_set_fill() to clear NC_NOFILL */
 #define NC_NOFILL       0x100   /**< Argument to nc_set_fill() to turn off filling of data. */
 
-/* Define the ioflags bits for nc_create and nc_open.
-   currently unused:
+/* Define the ioflags bits for nc_create and nc_open; all flags are powers
+   of two => single bit.
+   Currently unused:
+     Lower 16 bits:
         0x0002
         0x0040
         0x0080
-   and the whole upper 16 bits
+     Upper 16 bits:
+	0x00040000
+	0x00080000
+	0x00100000
+	0x00200000
+	0x00400000
+	0x00800000
+	0x01000000
+	0x02000000
+	0x04000000
+	0x08000000
+	0x10000000
+	0x20000000
+	0x40000000
+	0x80000000
 */
 
 #define NC_NOWRITE       0x0000 /**< Set read-only access for nc_open(). */
-#define NC_WRITE         0x0001 /**< Set read-write access for nc_open(). */
 #define NC_CLOBBER       0x0000 /**< Destroy existing file. Mode flag for nc_create(). */
+#define NC_WRITE         0x0001 /**< Set read-write access for nc_open(). */
 #define NC_NOCLOBBER     0x0004 /**< Don't destroy existing file. Mode flag for nc_create(). */
 
 #define NC_DISKLESS      0x0008  /**< Use diskless file. Mode flag for nc_open() or nc_create(). */
@@ -158,8 +174,8 @@ Use this in mode flags for both nc_create() and nc_open(). */
 
 #define NC_PNETCDF       (NC_MPIIO) /**< Use parallel-netcdf library; alias for NC_MPIIO. */
 
-#define NC_UDF0          0x0080  /**< User-defined format 0. */
-#define NC_UDF1          0x0002  /**< User-defined format 1. */
+#define NC_UDF0          0x00010000  /**< User-defined format 0. */
+#define NC_UDF1          0x00020000  /**< User-defined format 1. */
 
 #define NC_MAX_MAGIC_NUMBER_LEN 8 /**< Max len of ser-defined format magic number. */
 
@@ -212,8 +228,9 @@ Use this in mode flags for both nc_create() and nc_open(). */
 #define NC_FORMATX_PNETCDF   (4)
 #define NC_FORMATX_DAP2      (5)
 #define NC_FORMATX_DAP4      (6)
-#define NC_FORMATX_UDF0      (8)
-#define NC_FORMATX_UDF1      (9)
+#define NC_FORMATX_CLOUD     (7)
+#define NC_FORMATX_UDF0      (10)
+#define NC_FORMATX_UDF1      (11)
 #define NC_FORMATX_UNDEFINED (0)
 
   /* To avoid breaking compatibility (such as in the python library),

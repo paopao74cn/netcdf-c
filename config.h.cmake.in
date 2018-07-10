@@ -114,11 +114,14 @@ are set when opening a binary file on Windows. */
 /* if true, enable strict null byte header padding. */
 #cmakedefine USE_STRICT_NULL_BYTE_HEADER_PADDING 1
 
+/* if true, build Cloud Storage Client */
+#cmakedefine ENABLE_CLOUD 1
+
 /* if true, build DAP2 and DAP4 Client */
 #cmakedefine ENABLE_DAP 1
 
-/* if true, build DAP4 Client */
-#cmakedefine ENABLE_DAP4 1
+/* if true, build DAP2 Client */
+#cmakedefine ENABLE_DAP2 1
 
 /* if true, build DAP4 Client */
 #cmakedefine ENABLE_DAP4 1
