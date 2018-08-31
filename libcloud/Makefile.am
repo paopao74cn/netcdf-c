@@ -7,6 +7,8 @@
 # Put together AM_CPPFLAGS and AM_LDFLAGS.
 include $(top_srcdir)/lib_flags.am
 
+SUBDIRS=z5
+
 # We may have to add to these later.
 DISTCLEANFILES =
 MAINTAINERCLEANFILES =
@@ -17,10 +19,14 @@ LDADD=
 
 SRC= \
 nccsdispatch.c \
+csnc4.c \
+csdispatch.c \
+csfile.c \
 csdebug.c
 
 HDRS= \
 nccsdispatch.h \
+csdispatch.h \
 csdebug.h
 
 if ENABLE_CLOUD

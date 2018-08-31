@@ -202,15 +202,10 @@ export CXXFLAGS
 DISTCHECK_CONFIGURE_FLAGS="$FLAGS"
 export DISTCHECK_CONFIGURE_FLAGS
 
-if test "x$NB" != x -o "x$FAST" = x ; then
-${MAKE} maintainer-clean >/dev/null 2>&1
-fi
+${MAKE} distclean >/dev/null 2>&1
+
 if test -z "$NB" ; then
   if autoreconf -i --force ; then ok=1; else exit ; fi
-fi
-
-if test -z "$FAST" ; then
-  if test -f Makefile ; then ${MAKE} distclean >/dev/null 2>&1 ; fi
 fi
 
 sh $X ./configure ${FLAGS}

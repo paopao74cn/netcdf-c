@@ -18,17 +18,15 @@ are defined here.
 #define ncerror int
 
 /* Forward */
-typedef struct NCCSinfo NCCSinfo;
-typedef struct NCCScurl NCCScurl;
+typedef struct NCCS_INFO NCCS_INFO;
 
 /* This is the per-ncid data */
-struct NCCSINFO {
+struct NCCS_INFO {
     NC*   controller; /* Parent instance of NCD4INFO */
     int debug;
     char* rawurltext; /* as given to nccs_open */
     char* urltext;    /* as modified by nccs_open */
     NCURI* uri;      /* parse of rawuritext */
-    NCCScurl* curl;
     struct {
 	char* filename; /* of the substrate file */
         int nc4id; /* substrate nc4 file ncid used to hold metadata; not same as external id  */

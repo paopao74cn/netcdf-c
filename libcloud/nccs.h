@@ -11,8 +11,6 @@ defined here, including function-like #defines.
 #ifndef NCCS_H
 #define NCCS_H 1
 
-#include "nc4internal.h"
-
 /**************************************************/
 /* Constants */
 
@@ -56,7 +54,7 @@ defined here, including function-like #defines.
 #define MAKENCID(grp,file) ((((unsigned int)(file)) << ID_SHIFT) | (grp))
 
 /* Convert a nccs grpid to a substrate id */
-#define makenc4id(ncp,id) (((id) & GRP_ID_MASK) | ((NCCS_INFO*)ncp->controller)->substrate.nc4id)
+#define makenc4id(ncp,id) (((id) & GRP_ID_MASK) | ((NCCS_INFO*)ncp->dispatchdata)->substrate.nc4id)
 /* and the inverse */
 #define makecsid(ncp,nc4id) (((nc4id) & GRP_ID_MASK) | (ncp)->ext_ncid)
 

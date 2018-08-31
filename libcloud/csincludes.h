@@ -43,8 +43,8 @@
 #include "ncuri.h"
 #include "nclog.h"
 #include "ncdap.h"
-
-#include "csutil.h"
+#include "ncdispatch.h"
+#include "nc4internal.h"
 
 #include "nccstypes.h"
 #include "nccs.h"

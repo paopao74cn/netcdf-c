@@ -678,6 +678,7 @@ if test -n "$cc_version_info"; then
 fi
 
 
+AC_PROG_CXX
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_C_CONST
@@ -1535,7 +1536,6 @@ AC_CONFIG_FILES([Makefile
                  libdap2/Makefile
                  libdap4/Makefile
                  libhdf4/Makefile
-                 libcloud/Makefile
                  libdispatch/Makefile
                  liblib/Makefile
                  ncdump/cdl/Makefile
@@ -1552,6 +1552,10 @@ AC_CONFIG_FILES([Makefile
                  dap4_test/Makefile
                  cloud_test/Makefile
                  plugins/Makefile
+                 libcloud/Makefile
+                 libcloud/z5/Makefile
+                 libcloud/z5/src/Makefile
+                 libcloud/z5/src/test/Makefile
                  ],
                  [test -f  nc-config && chmod 755 nc-config])
 
