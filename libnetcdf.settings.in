@@ -36,4 +36,5 @@ MMap Support:		@HAS_MMAP@
 JNA Support:		@HAS_JNA@
 CDF5 Support:		@HAS_CDF5@
 ERANGE fill Support:	@HAS_ERANGE_FILL@
+Relaxed Boundary Check:	@RELAX_COORD_BOUND@
 Cloud Storage Support:	@HAS_CLOUD@
