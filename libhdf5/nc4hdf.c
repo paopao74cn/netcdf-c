@@ -3,8 +3,9 @@
  * conditions. */
 /**
  * @file
- * This file is part of netcdf-4, a netCDF-like interface for HDF5, or a
- * HDF5 backend for netCDF, depending on your point of view.
+ * @internal This file is part of netcdf-4, a netCDF-like interface
+ * for HDF5, or a HDF5 backend for netCDF, depending on your point of
+ * view.
  *
  * This file contains functions internal to the netcdf4 library. None of
  * the functions in this file are exposed in the exetnal API. These
@@ -24,18 +25,13 @@
 
 #define NC_HDF5_MAX_NAME 1024 /**< @internal Max size of HDF5 name. */
 
-#define MAXNAME 1024 /**< Max HDF5 name. */
-
-/** @internal HDF5 object types. */
-static unsigned int OTYPES[5] = {H5F_OBJ_FILE, H5F_OBJ_DATASET, H5F_OBJ_GROUP,
-                                 H5F_OBJ_DATATYPE, H5F_OBJ_ATTR};
-
 /**
  * @internal Flag attributes in a linked list as dirty.
  *
  * @param attlist List of attributes, may be NULL.
  *
  * @return NC_NOERR No error.
+ * @author Dennis Heimbigner
  */
 static int
 flag_atts_dirty(NCindex *attlist) {
@@ -54,7 +50,6 @@ flag_atts_dirty(NCindex *attlist) {
    }
 
    return NC_NOERR;
-
 }
 
 /**
@@ -359,11 +354,11 @@ nc4_get_fill_value(NC_FILE_INFO_T *h5, NC_VAR_INFO_T *var, void **fillp)
  * @param hdf_typeid Pointer that gets the HDF5 type ID.
  * @param endianness Desired endianness in HDF5 type.
  *
- * @returns NC_NOERR No error.
- * @returns NC_ECHAR Conversions of NC_CHAR forbidden.
- * @returns NC_EVARMETA HDF5 returning error creating datatype.
- * @returns NC_EHDFERR HDF5 returning error.
- * @returns NC_EBADTYE Type not found.
+ * @return NC_NOERR No error.
+ * @return NC_ECHAR Conversions of NC_CHAR forbidden.
+ * @return NC_EVARMETA HDF5 returning error creating datatype.
+ * @return NC_EHDFERR HDF5 returning error.
+ * @return NC_EBADTYE Type not found.
  * @author Ed Hartnett
  */
 int
@@ -380,7 +375,6 @@ nc4_get_hdf_typeid(NC_FILE_INFO_T *h5, nc_type xtype,
 
    /* Determine an appropriate HDF5 datatype */
    if (xtype == NC_NAT)
-      /* NAT = 'Not A Type' (c.f. NaN) */
       return NC_EBADTYPE;
    else if (xtype == NC_CHAR || xtype == NC_STRING)
    {
@@ -550,15 +544,17 @@ put_att_grpa(NC_GRP_INFO_T *grp, int varid, NC_ATT_INFO_T *att)
 {
    hid_t datasetid = 0, locid;
    hid_t attid = 0, spaceid = 0, file_typeid = 0;
+   hid_t existing_att_typeid = 0, existing_attid = 0, existing_spaceid = 0;
    hsize_t dims[1]; /* netcdf attributes always 1-D. */
    htri_t attr_exists;
-   int retval = NC_NOERR;
+   int reuse_att = 0; /* Will be true if we can re-use an existing att. */
    void *data;
    int phoney_data = 99;
+   int retval = NC_NOERR;
 
    assert(att->hdr.name);
-   LOG((3, "%s: varid %d att->hdr.id %d att->hdr.name %s att->nc_typeid %d att->len %d",
-        __func__, varid, att->hdr.id, att->hdr.name,
+   LOG((3, "%s: varid %d att->hdr.id %d att->hdr.name %s att->nc_typeid %d "
+        "att->len %d", __func__, varid, att->hdr.id, att->hdr.name,
         att->nc_typeid, att->len));
 
    /* If the file is read-only, return an error. */
@@ -573,15 +569,6 @@ put_att_grpa(NC_GRP_INFO_T *grp, int varid, NC_ATT_INFO_T *att)
       if ((retval = nc4_open_var_grp2(grp, varid, &datasetid)))
          BAIL(retval);
       locid = datasetid;
-   }
-
-   /* Delete the att if it exists already. */
-   if ((attr_exists = H5Aexists(locid, att->hdr.name)) < 0)
-      BAIL(NC_EHDFERR);
-   if (attr_exists)
-   {
-      if (H5Adelete(locid, att->hdr.name) < 0)
-         BAIL(NC_EHDFERR);
    }
 
    /* Get the length ready, and find the HDF type we'll be
@@ -640,6 +627,41 @@ put_att_grpa(NC_GRP_INFO_T *grp, int varid, NC_ATT_INFO_T *att)
             BAIL(NC_EATTMETA);
       }
    }
+
+   /* Does the att exists already? */
+   if ((attr_exists = H5Aexists(locid, att->hdr.name)) < 0)
+      BAIL(NC_EHDFERR);
+   if (attr_exists)
+   {
+      hssize_t npoints;
+
+      /* Open the attribute. */
+      if ((existing_attid = H5Aopen(locid, att->hdr.name, H5P_DEFAULT)) < 0)
+         BAIL(NC_EATTMETA);
+
+      /* Find the type of the existing attribute. */
+      if ((existing_att_typeid = H5Aget_type(existing_attid)) < 0)
+         BAIL(NC_EATTMETA);
+
+      /* How big is the attribute? */
+      if ((existing_spaceid = H5Aget_space(existing_attid)) < 0)
+         BAIL(NC_EATTMETA);
+      if ((npoints = H5Sget_simple_extent_npoints(existing_spaceid)) < 0)
+         BAIL(NC_EATTMETA);
+
+      /* Delete the attribute. */
+      if (file_typeid != existing_att_typeid || npoints != att->len)
+      {
+         if (H5Adelete(locid, att->hdr.name) < 0)
+            BAIL(NC_EHDFERR);
+      }
+      else
+      {
+         reuse_att++;
+      }
+   }
+
+   /* Create the attribute. */
    if ((attid = H5Acreate(locid, att->hdr.name, file_typeid, spaceid,
                           H5P_DEFAULT)) < 0)
       BAIL(NC_EATTMETA);
@@ -653,7 +675,13 @@ exit:
       BAIL2(NC_EHDFERR);
    if (attid > 0 && H5Aclose(attid) < 0)
       BAIL2(NC_EHDFERR);
+   if (existing_att_typeid && H5Tclose(existing_att_typeid))
+      BAIL2(NC_EHDFERR);
+   if (existing_attid > 0 && H5Aclose(existing_attid) < 0)
+      BAIL2(NC_EHDFERR);
    if (spaceid > 0 && H5Sclose(spaceid) < 0)
+      BAIL2(NC_EHDFERR);
+   if (existing_spaceid > 0 && H5Sclose(existing_spaceid) < 0)
       BAIL2(NC_EHDFERR);
    return retval;
 }
@@ -670,16 +698,16 @@ exit:
  * @author Ed Hartnett
  */
 static int
-write_attlist(NCindex* attlist, int varid, NC_GRP_INFO_T *grp)
+write_attlist(NCindex *attlist, int varid, NC_GRP_INFO_T *grp)
 {
    NC_ATT_INFO_T *att;
    int retval;
    int i;
 
-   for(i=0;i<ncindexsize(attlist);i++)
+   for(i = 0; i < ncindexsize(attlist); i++)
    {
-      att = (NC_ATT_INFO_T*)ncindexith(attlist,i);
-      if(att == NULL) continue;
+      att = (NC_ATT_INFO_T *)ncindexith(attlist, i);
+      assert(att);
       if (att->dirty)
       {
          LOG((4, "%s: writing att %s to varid %d", __func__, att->hdr.name, varid));
@@ -790,6 +818,10 @@ write_netcdf4_dimid(hid_t datasetid, int dimid)
  * @param write_dimid True to write dimid.
  *
  * @return ::NC_NOERR
+ * @returns NC_ECHAR Conversions of NC_CHAR forbidden.
+ * @returns NC_EVARMETA HDF5 returning error creating datatype.
+ * @returns NC_EHDFERR HDF5 returning error.
+ * @returns NC_EBADTYE Type not found.
  * @author Ed Hartnett
  */
 static int
@@ -801,7 +833,7 @@ var_create_dataset(NC_GRP_INFO_T *grp, NC_VAR_INFO_T *var, nc_bool_t write_dimid
    void *fillp = NULL;
    NC_DIM_INFO_T *dim = NULL;
    char *name_to_use;
-   int retval = NC_NOERR;
+   int retval;
 
    LOG((3, "%s:: name %s", __func__, var->hdr.name));
 
@@ -811,8 +843,8 @@ var_create_dataset(NC_GRP_INFO_T *grp, NC_VAR_INFO_T *var, nc_bool_t write_dimid
    if ((access_plistid = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
       BAIL(NC_EHDFERR);
 
-   /* RJ: this suppose to be FALSE that is defined in H5 private.h as 0 */
-   if (H5Pset_obj_track_times(plistid,0)<0)
+   /* Turn off object tracking times in HDF5. */
+   if (H5Pset_obj_track_times(plistid, 0) < 0)
       BAIL(NC_EHDFERR);
 
    /* Find the HDF5 type of the dataset. */
@@ -1018,7 +1050,6 @@ var_create_dataset(NC_GRP_INFO_T *grp, NC_VAR_INFO_T *var, nc_bool_t write_dimid
             BAIL(retval);
    }
 
-
    /* Write attributes for this var. */
    if ((retval = write_attlist(var->att, var->hdr.id, grp)))
       BAIL(retval);
@@ -1056,7 +1087,7 @@ exit:
  * @author Ed Hartnett
  */
 int
-nc4_adjust_var_cache(NC_GRP_INFO_T *grp, NC_VAR_INFO_T * var)
+nc4_adjust_var_cache(NC_GRP_INFO_T *grp, NC_VAR_INFO_T *var)
 {
    size_t chunk_size_bytes = 1;
    int d;
@@ -1101,6 +1132,11 @@ nc4_adjust_var_cache(NC_GRP_INFO_T *grp, NC_VAR_INFO_T * var)
  * @param type Pointer to type info struct.
  *
  * @return NC_NOERR No error.
+ * @return NC_EHDFERR HDF5 error.
+ * @return NC_ECHAR Conversions of NC_CHAR forbidden.
+ * @return NC_EVARMETA HDF5 returning error creating datatype.
+ * @return NC_EHDFERR HDF5 returning error.
+ * @return NC_EBADTYE Type not found.
  * @author Ed Hartnett
  */
 static int
@@ -1128,7 +1164,8 @@ commit_type(NC_GRP_INFO_T *grp, NC_TYPE_INFO_T *type)
 
       for(i=0;i<nclistlength(type->u.c.field);i++)
       {
-         if((field = (NC_FIELD_INFO_T*)nclistget(type->u.c.field,i)) == NULL) continue;
+         field = (NC_FIELD_INFO_T *)nclistget(type->u.c.field, i);
+         assert(field);
          if ((retval = nc4_get_hdf_typeid(grp->nc4_info, field->nc_typeid,
                                           &hdf_base_typeid, type->endianness)))
             return retval;
@@ -1921,11 +1958,13 @@ nc4_rec_write_metadata(NC_GRP_INFO_T *grp, nc_bool_t bad_coord_order)
    int i;
 
    assert(grp && grp->hdr.name && grp->hdf_grpid);
-   LOG((3, "%s: grp->hdr.name %s, bad_coord_order %d", __func__, grp->hdr.name, bad_coord_order));
+   LOG((3, "%s: grp->hdr.name %s, bad_coord_order %d", __func__, grp->hdr.name,
+        bad_coord_order));
 
    /* Write global attributes for this group. */
    if ((retval = write_attlist(grp->att, NC_GLOBAL, grp)))
       return retval;
+
    /* Set the pointers to the beginning of the list of dims & vars in this
     * group. */
    dim_index = 0;
@@ -2014,7 +2053,8 @@ nc4_rec_write_groups_types(NC_GRP_INFO_T *grp)
 
    /* If there are any user-defined types, write them now. */
    for(i=0;i<ncindexsize(grp->type);i++) {
-      if((type = (NC_TYPE_INFO_T*)ncindexith(grp->type,i)) == NULL) continue;
+      type = (NC_TYPE_INFO_T *)ncindexith(grp->type, i);
+      assert(type);
       if ((retval = commit_type(grp, type)))
          return retval;
    }
@@ -3172,23 +3212,25 @@ exit:
 }
 
 /**
- * @internal
+ * @internal Report information about an open HDF5 object. This is
+ * called on any still-open objects when a HDF5 file close is
+ * attempted.
  *
- * @param uselog
- * @param id HDF5 ID.
- * @param type
+ * @param uselog If true, send output to LOG not stderr.
+ * @param id HDF5 ID of open object.
+ * @param type Type of HDF5 object, file, dataset, etc.
  *
- * @return NC_NOERR No error.
+ * @author Dennis Heimbigner
  */
 void
 reportobject(int uselog, hid_t id, unsigned int type)
 {
-   char name[MAXNAME];
+   char name[NC_HDF5_MAX_NAME];
    ssize_t len;
    const char* typename = NULL;
    long long printid = (long long)id;
 
-   len = H5Iget_name(id, name, MAXNAME);
+   len = H5Iget_name(id, name, NC_HDF5_MAX_NAME);
    if(len < 0) return;
    name[len] = '\0';
 
@@ -3199,7 +3241,7 @@ reportobject(int uselog, hid_t id, unsigned int type)
    case H5F_OBJ_DATATYPE: typename = "Datatype"; break;
    case H5F_OBJ_ATTR:
       typename = "Attribute";
-      len = H5Aget_name(id, MAXNAME, name);
+      len = H5Aget_name(id, NC_HDF5_MAX_NAME, name);
       if(len < 0) len = 0;
       name[len] = '\0';
       break;
@@ -3224,7 +3266,7 @@ reportobject(int uselog, hid_t id, unsigned int type)
  * @param ntypes Number of types.
  * @param otypes Pointer that gets number of open types.
  *
- * @return ::NC_NOERR No error.
+ * @author Dennis Heimbigner
  */
 static void
 reportopenobjectsT(int uselog, hid_t fid, int ntypes, unsigned int* otypes)
@@ -3261,11 +3303,14 @@ reportopenobjectsT(int uselog, hid_t fid, int ntypes, unsigned int* otypes)
  * @param uselog
  * @param fid HDF5 file ID.
  *
- * @return NC_NOERR No error.
+ * @author Dennit Heimbigner
  */
 void
 reportopenobjects(int uselog, hid_t fid)
 {
+   unsigned int OTYPES[5] = {H5F_OBJ_FILE, H5F_OBJ_DATASET, H5F_OBJ_GROUP,
+                             H5F_OBJ_DATATYPE, H5F_OBJ_ATTR};
+
    reportopenobjectsT(uselog, fid ,5, OTYPES);
 }
 
@@ -3274,6 +3319,7 @@ reportopenobjects(int uselog, hid_t fid)
  *
  * @param h5 file object
  *
+ * @author Dennis Heimbigner
  */
 void
 showopenobjects5(NC_FILE_INFO_T* h5)
@@ -3295,6 +3341,7 @@ showopenobjects5(NC_FILE_INFO_T* h5)
  *
  * @param ncid file id
  *
+ * @author Dennis Heimbigner
  */
 void
 showopenobjects(int ncid)

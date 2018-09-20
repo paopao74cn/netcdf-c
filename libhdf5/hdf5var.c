@@ -217,7 +217,7 @@ nc4_find_default_chunksizes2(NC_GRP_INFO_T *grp, NC_VAR_INFO_T *var)
  * @param ncid File ID.
  * @param name Name.
  * @param xtype Type.
- * @param ndims Number of dims.
+ * @param ndims Number of dims. HDF5 has maximim of 32.
  * @param dimidsp Array of dim IDs.
  * @param varidp Gets the var ID.
  *
@@ -258,6 +258,10 @@ NC4_def_var(int ncid, const char *name, nc_type xtype,
    if ((retval = nc4_find_grp_h5(ncid, &grp, &h5)))
       BAIL(retval);
    assert(grp && h5);
+
+   /* HDF5 allows maximum of 32 dimensions. */
+   if (ndims > H5S_MAX_RANK)
+      BAIL(NC_EMAXDIMS);
 
    /* If it's not in define mode, strict nc3 files error out,
     * otherwise switch to define mode. This will also check that the
@@ -813,21 +817,14 @@ NC4_def_var_chunking(int ncid, int varid, int contiguous, const size_t *chunksiz
 int
 nc_def_var_chunking_ints(int ncid, int varid, int contiguous, int *chunksizesp)
 {
-   NC *nc;
-   NC_GRP_INFO_T *grp;
    NC_VAR_INFO_T *var;
-   NC_FILE_INFO_T *h5;
-   size_t *cs = NULL;
+   size_t *cs;
    int i, retval;
 
-   /* Find this ncid's file info. */
-   if ((retval = nc4_find_nc_grp_h5(ncid, &nc, &grp, &h5)))
+   /* Get pointer to the var. */
+   if ((retval = nc4_find_grp_h5_var(ncid, varid, NULL, NULL, &var)))
       return retval;
-   assert(nc);
-
-   /* Find var cause I need the number of dims. */
-   if ((retval = nc4_find_g_var_nc(nc, ncid, varid, &grp, &var)))
-      return retval;
+   assert(var);
 
    /* Allocate space for the size_t copy of the chunksizes array. */
    if (var->ndims)
