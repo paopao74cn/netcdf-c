@@ -46,18 +46,18 @@ struct NCAUX_CMPD {
     size_t alignment;
 };
 
-
 /* Forward */
 static int reclaim_datar(int ncid, int xtype, void* memory);
-
 #ifdef USE_NETCDF4
-static int ncaux_initialized = 0;
 static int reclaim_usertype(int ncid, int xtype, void* memory);
 static int reclaim_compound(int ncid, int xtype, size_t size, size_t nfields, void* memory);
 static int reclaim_vlen(int ncid, int xtype, int basetype, void* memory);
 static int reclaim_enum(int ncid, int xtype, int basetype, void* memory);
 static int reclaim_opaque(int ncid, int xtype, size_t size, void* memory);
+#endif
 
+#ifdef USE_NETCDF4
+static int ncaux_initialized = 0;
 static void compute_alignments(void);
 static int computefieldinfo(struct NCAUX_CMPD* cmpd);
 #endif
