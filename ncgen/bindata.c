@@ -481,7 +481,7 @@ bin_reclaim_datar(Symbol* tsym, Reclaim* reclaimer)
     case NC_STRING: {
 	char** sp = (char**)(reclaimer->memory+reclaimer->offset);
         /* Need to reclaim string */
-	if(*sp != NULL) free(*sp);
+	if(*sp != NULL) efree(*sp);
 	reclaimer->offset += tsym->typ.size;
 	} break;
     default:
@@ -568,25 +568,25 @@ bin_reclaim_compound(Symbol* tsym, Reclaim* reclaimer)
     int stat = NC_NOERR;
     int nfields;
     size_t fid, i, arraycount;
+    ptrdiff_t saveoffset;
 
     reclaimer->offset = read_alignment(reclaimer->offset,tsym->typ.cmpdalign);
+    saveoffset = reclaimer->offset;
 
     /* Get info about each field in turn and reclaim it */
     nfields = listlength(tsym->subnodes);
     for(fid=0;fid<nfields;fid++) {
 	Symbol* field = listget(tsym->subnodes,fid);
 	int ndims = field->typ.dimset.ndims;
-	ptrdiff_t saveoffset;
 	/* compute the total number of elements in the field array */
 	for(i=0;i<ndims;i++) arraycount *= field->typ.dimset.dimsyms[i]->dim.declsize;
 	reclaimer->offset = read_alignment(reclaimer->offset,field->typ.alignment);
-	saveoffset = reclaimer->offset;
 	for(i=0;i<arraycount;i++) {
-	    reclaimer->offset = reclaimer->offset + (i*field->typ.size);
 	    if((stat = bin_reclaim_datar(field->typ.basetype, reclaimer))) goto done;
 	}		
-	reclaimer->offset = saveoffset;
     }
+    reclaimer->offset = saveoffset;
+    reclaimer->offset += tsym->typ.size;
 done:
     return stat;
 }

@@ -29,7 +29,7 @@ we do not know how it was allocated.
 Should work for any netcdf format.
 */
 
-EXTERNL int ncaux_reclaim_data(int ncid, int xtype, const void* memory, size_t count);
+EXTERNL int ncaux_reclaim_data(int ncid, int xtype, void* memory, size_t count);
 
 
 EXTERNL int ncaux_begin_compound(int ncid, const char *name, int alignmode,

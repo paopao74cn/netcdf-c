@@ -60,31 +60,6 @@ nullconst(void)
     return n;
 }
 
-
-/* return 1 if the next element in the datasrc is compound*/
-int
-issublist(Datasrc* datasrc) {return istype(datasrc,NC_COMPOUND);}
-
-/* return 1 if the next element in the datasrc is a string*/
-int
-isstring(Datasrc* datasrc) {return istype(datasrc,NC_STRING);}
-
-/* return 1 if the next element in the datasrc is a fill value*/
-int
-isfillvalue(Datasrc* datasrc)
-{
-return srcpeek(datasrc) == NULL || istype(datasrc,NC_FILLVALUE);
-}
-
-/* return 1 if the next element in the datasrc is nc_type*/
-int
-istype(Datasrc* datasrc , nc_type nctype)
-{
-    NCConstant* ci = srcpeek(datasrc);
-    if(ci != NULL && ci->nctype == nctype) return 1;
-    return 0;
-}
-
 int
 isstringable(nc_type nctype)
 {
@@ -96,53 +71,6 @@ isstringable(nc_type nctype)
     default: break;
     }
     return 0;
-}
-
-/**************************************************/
-
-void
-freedatasrc(Datasrc* src)
-{
-    efree(src);
-}
-
-Datasrc*
-allocdatasrc(void)
-{
-    Datasrc* src;
-    src = ecalloc(sizeof(Datasrc));
-    src->data = NULL;
-    src->index = 0;
-    src->length = 0;
-    src->prev = NULL;
-    return src;
-}
-
-Datasrc*
-datalist2src(Datalist* list)
-{
-    Datasrc* src;
-    ASSERT(list != NULL);
-    src = allocdatasrc();
-    src->data = list->data;
-    src->index = 0;
-    src->length = list->length;
-    DUMPSRC(src,"#");
-    return src;
-}
-
-Datasrc*
-const2src(NCConstant* con)
-{
-    Datasrc* src;
-    ASSERT(con != NULL);
-    src = allocdatasrc();
-    src->data = emalloc(sizeof(NCConstant*));
-    src->data[0] = con;
-    src->index = 0;
-    src->length = 1;
-    DUMPSRC(src,"#");
-    return src;
 }
 
 NCConstant*
@@ -169,109 +97,6 @@ const2list(NCConstant* con)
     return list;
 }
 
-NCConstant*
-srcpeek(Datasrc* ds)
-{
-    if(ds == NULL) return NULL;
-    if(ds->index < ds->length)
-	return ds->data[ds->index];
-    if(ds->spliced)
-	return srcpeek(ds->prev);
-    return NULL;
-}
-
-void
-srcreset(Datasrc* ds)
-{
-    ds->index = 0;
-}
-
-NCConstant*
-srcnext(Datasrc* ds)
-{
-    DUMPSRC(ds,"!");
-    if(ds == NULL) return NULL;
-    if(ds->index < ds->length)
-	return ds->data[ds->index++];
-    if(ds->spliced) {
-	srcpop(ds);
-	return srcnext(ds);
-    }
-    return NULL;
-}
-
-int
-srcmore(Datasrc* ds)
-{
-    if(ds == NULL) return 0;
-    if(ds->index < ds->length) return 1;
-    if(ds->spliced) return srcmore(ds->prev);
-    return 0;
-}
-
-int
-srcline(Datasrc* ds)
-{
-    int index = ds->index;
-    int len = ds->length;
-    /* pick closest available entry*/
-    if(len == 0) return 0;
-    if(index >= len) index = len-1;
-    return ds->data[index]->lineno;
-}
-
-void
-srcpush(Datasrc* src)
-{
-    NCConstant* con;
-    ASSERT(src != NULL);
-    con = srcnext(src);
-    ASSERT(con->nctype == NC_COMPOUND);
-    srcpushlist(src,con->value.compoundv);
-}
-
-void
-srcpushlist(Datasrc* src, Datalist* dl)
-{
-    Datasrc* newsrc;
-    ASSERT(src != NULL && dl != NULL);
-    newsrc = allocdatasrc();
-    *newsrc = *src;
-    src->prev = newsrc;
-    src->index = 0;
-    src->data = dl->data;
-    src->length = dl->length;
-    DUMPSRC(src,">!");
-}
-
-void
-srcpop(Datasrc* src)
-{
-    if(src != NULL) {
-        Datasrc* prev = src->prev;
-	*src = *prev;
-        freedatasrc(prev);
-    }
-    DUMPSRC(src,"<");
-}
-
-void
-srcsplice(Datasrc* ds, Datalist* list)
-{
-    srcpushlist(ds,list);
-    ds->spliced = 1;    
-}
-
-void
-srcsetfill(Datasrc* ds, Datalist* list)
-{
-    if(ds->index >= ds->length) PANIC("srcsetfill: no space");
-    if(ds->data[ds->index]->nctype != NC_FILLVALUE) PANIC("srcsetfill: not fill");
-    ds->data[ds->index]->nctype = NC_COMPOUND;
-    setconstlist(ds->data[ds->index],list);
-}
-
-
 /**************************************************/
 #ifdef GENDEBUG
 void
@@ -285,10 +110,6 @@ fflush(stderr);
 bbFree(buf);
 }
 
-void
-report0(char* lead, Datasrc* src, int index)
-{
-}
 #endif
 
 /**************************************************/
@@ -376,6 +197,7 @@ freeconstant(NCConstant* con, int shallow)
 
 /**************************************************/
 
+#if 0
 Datalist*
 datalistclone(Datalist* dl)
 {
@@ -387,7 +209,6 @@ datalistclone(Datalist* dl)
     return clone;
 }
 
-#if 0
 Datalist*
 datalistappend(Datalist* dl, NCConstant* con)
 {
@@ -940,3 +761,180 @@ fprintf(stderr,"XXX\n");
     efree(alldatalists);
     alldatalists = NULL;    
 }
+
+/* Obsolete */
+#if 0
+/* return 1 if the next element in the datasrc is compound*/
+int
+issublist(Datasrc* datasrc) {return istype(datasrc,NC_COMPOUND);}
+
+/* return 1 if the next element in the datasrc is a string*/
+int
+isstring(Datasrc* datasrc) {return istype(datasrc,NC_STRING);}
+
+/* return 1 if the next element in the datasrc is a fill value*/
+int
+isfillvalue(Datasrc* datasrc)
+{
+return srcpeek(datasrc) == NULL || istype(datasrc,NC_FILLVALUE);
+}
+
+/* return 1 if the next element in the datasrc is nc_type*/
+int
+istype(Datasrc* datasrc , nc_type nctype)
+{
+    NCConstant* ci = srcpeek(datasrc);
+    if(ci != NULL && ci->nctype == nctype) return 1;
+    return 0;
+}
+
+/**************************************************/
+
+void
+freedatasrc(Datasrc* src)
+{
+    efree(src);
+}
+
+Datasrc*
+allocdatasrc(void)
+{
+    Datasrc* src;
+    src = ecalloc(sizeof(Datasrc));
+    src->data = NULL;
+    src->index = 0;
+    src->length = 0;
+    src->prev = NULL;
+    return src;
+}
+
+Datasrc*
+datalist2src(Datalist* list)
+{
+    Datasrc* src;
+    ASSERT(list != NULL);
+    src = allocdatasrc();
+    src->data = list->data;
+    src->index = 0;
+    src->length = list->length;
+    DUMPSRC(src,"#");
+    return src;
+}
+
+Datasrc*
+const2src(NCConstant* con)
+{
+    Datasrc* src;
+    ASSERT(con != NULL);
+    src = allocdatasrc();
+    src->data = emalloc(sizeof(NCConstant*));
+    src->data[0] = con;
+    src->index = 0;
+    src->length = 1;
+    DUMPSRC(src,"#");
+    return src;
+}
+
+NCConstant*
+srcpeek(Datasrc* ds)
+{
+    if(ds == NULL) return NULL;
+    if(ds->index < ds->length)
+	return ds->data[ds->index];
+    if(ds->spliced)
+	return srcpeek(ds->prev);
+    return NULL;
+}
+
+void
+srcreset(Datasrc* ds)
+{
+    ds->index = 0;
+}
+
+NCConstant*
+srcnext(Datasrc* ds)
+{
+    DUMPSRC(ds,"!");
+    if(ds == NULL) return NULL;
+    if(ds->index < ds->length)
+	return ds->data[ds->index++];
+    if(ds->spliced) {
+	srcpop(ds);
+	return srcnext(ds);
+    }
+    return NULL;
+}
+
+int
+srcmore(Datasrc* ds)
+{
+    if(ds == NULL) return 0;
+    if(ds->index < ds->length) return 1;
+    if(ds->spliced) return srcmore(ds->prev);
+    return 0;
+}
+
+int
+srcline(Datasrc* ds)
+{
+    int index = ds->index;
+    int len = ds->length;
+    /* pick closest available entry*/
+    if(len == 0) return 0;
+    if(index >= len) index = len-1;
+    return ds->data[index]->lineno;
+}
+
+void
+srcpush(Datasrc* src)
+{
+    NCConstant* con;
+    ASSERT(src != NULL);
+    con = srcnext(src);
+    ASSERT(con->nctype == NC_COMPOUND);
+    srcpushlist(src,con->value.compoundv);
+}
+
+void
+srcpushlist(Datasrc* src, Datalist* dl)
+{
+    Datasrc* newsrc;
+    ASSERT(src != NULL && dl != NULL);
+    newsrc = allocdatasrc();
+    *newsrc = *src;
+    src->prev = newsrc;
+    src->index = 0;
+    src->data = dl->data;
+    src->length = dl->length;
+    DUMPSRC(src,">!");
+}
+
+void
+srcpop(Datasrc* src)
+{
+    if(src != NULL) {
+        Datasrc* prev = src->prev;
+	*src = *prev;
+        freedatasrc(prev);
+    }
+    DUMPSRC(src,"<");
+}
+
+void
+srcsplice(Datasrc* ds, Datalist* list)
+{
+    srcpushlist(ds,list);
+    ds->spliced = 1;    
+}
+
+void
+srcsetfill(Datasrc* ds, Datalist* list)
+{
+    if(ds->index >= ds->length) PANIC("srcsetfill: no space");
+    if(ds->data[ds->index]->nctype != NC_FILLVALUE) PANIC("srcsetfill: not fill");
+    ds->data[ds->index]->nctype = NC_COMPOUND;
+    setconstlist(ds->data[ds->index],list);
+}
+
+#endif /*0*/

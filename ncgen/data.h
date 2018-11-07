@@ -83,12 +83,15 @@ typedef struct Datasrc {
     struct Datasrc* prev; /* linked list for debugging */
 } Datasrc;
 
+#if 0
 /* Define a holder for passing a start/count array */
 struct Vlendata {
     char* data;
     unsigned long count;
 };
 extern struct Vlendata* vlendata;
+#endif
+
 extern List* alldatalists;
 
 /* from: data.c */
@@ -108,28 +111,10 @@ int       datalistline(Datalist*);
 #define   datalistith(dl,i) ((dl)==NULL?NULL:((i) >= (dl)->length?NULL:(dl)->data[i]))
 #define   datalistlen(dl) ((dl)==NULL?0:(dl)->length)
 
-Datasrc* datalist2src(Datalist* list);
-Datasrc* const2src(NCConstant*);
 NCConstant* list2const(Datalist*);
 Datalist* const2list(NCConstant* con);
-void freedatasrc(Datasrc* src);
 
-int issublist(Datasrc* src);
-int isstring(Datasrc* src);
-int isfillvalue(Datasrc* src);
-int istype(Datasrc* src, nc_type);
 int isstringable(nc_type nctype);
-
-void srcpush(Datasrc*);
-void srcpushlist(Datasrc* src, Datalist* cmpd);
-void srcpop(Datasrc*);
-void srcsetfill(Datasrc* ds, Datalist* list);
-
-NCConstant* srcnext(Datasrc*);
-int srcmore(Datasrc*);
-int srcline(Datasrc* ds);
-void srcreset(Datasrc* ds);
-#define srclen(s) ((s)==NULL?0:(s)->length)
 
 #define islistconst(con) ((con)!=NULL && (con)->nctype == NC_COMPOUND)
 #define isfillconst(con) ((con)!=NULL && (con)->nctype == NC_FILLVALUE)
@@ -167,12 +152,6 @@ char* word(char* p, Bytebuffer* buf);
 /* Provide buffers for language based generators */
 extern Bytebuffer* codebuffer; /* buffer over the std output */
 extern Bytebuffer* stmt; /* single stmt text generation */
-
-#ifdef FASTDATASRC
-#define srcpeek(ds) ((ds)==NULL || (ds)->index >= (ds)->max?NULL:(ds)->data+(ds)->index)
-#else
-NCConstant* srcpeek(Datasrc*);
-#endif
 
 /* Aliases */
 #define srcincr(src) srcnext(src)
@@ -212,6 +191,31 @@ extern void generate_attrdata(struct Symbol*, Generator*, Writer writer, Bytebuf
 extern void generate_vardata(struct Symbol*, Generator*, Writer writer,Bytebuffer*);
 extern void generate_basetype(struct Symbol*,NCConstant*,Bytebuffer*,Datalist*,Generator*);
 
+
+/* Obsolete */
+#if 0
+Datasrc* datalist2src(Datalist* list);
+Datasrc* const2src(NCConstant*);
+void freedatasrc(Datasrc* src);
+int issublist(Datasrc* src);
+int isstring(Datasrc* src);
+int isfillvalue(Datasrc* src);
+int istype(Datasrc* src, nc_type);
+void srcpush(Datasrc*);
+void srcpushlist(Datasrc* src, Datalist* cmpd);
+void srcpop(Datasrc*);
+void srcsetfill(Datasrc* ds, Datalist* list);
+NCConstant* srcnext(Datasrc*);
+int srcmore(Datasrc*);
+int srcline(Datasrc* ds);
+void srcreset(Datasrc* ds);
+#define srclen(s) ((s)==NULL?0:(s)->length)
+#ifdef FASTDATASRC
+#define srcpeek(ds) ((ds)==NULL || (ds)->index >= (ds)->max?NULL:(ds)->data+(ds)->index)
+#else
+NCConstant* srcpeek(Datasrc*);
+#endif
+#endif /*0*/
 
 #endif /*DATA_H*/
 
