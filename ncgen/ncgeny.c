@@ -2924,10 +2924,10 @@ yyerror(fmt,va_alist) const char* fmt; va_dcl
 #endif
 {
     va_list argv;
-    vastart(argv,fmt);
+    va_start(argv,fmt);
     (void)fprintf(stderr,"%s: %s line %d: ", progname, cdlname, lineno);
     vderror(fmt,argv);
-    vaend(argv,fmt);
+    va_end(argv);
 }
 
 /* undefine yywrap macro, in case we are using bison instead of yacc */

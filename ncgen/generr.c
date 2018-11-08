@@ -9,8 +9,10 @@
 
 int error_count;
 
+#if 0
 #define vastart(argv,fmt) va_start(argv,fmt)
 #define vaend(argv,fmt) va_end(argv)
+#endif
 
 /*
  * For logging error conditions.
@@ -39,7 +41,7 @@ void
 derror(const char *fmt, ...)
 {
     va_list argv;
-    vastart(argv,fmt);
+    va_start(argv,fmt);
     vderror(fmt,argv);
 }
 
@@ -49,18 +51,18 @@ verror(const char *fmt, ...)
 {
     char newfmt[2048];
     va_list argv;
-    vastart(argv,fmt);
+    va_start(argv,fmt);
     strcpy(newfmt,"netCDF classic: not supported: ");
     strncat(newfmt,fmt,2000);
     vderror(newfmt,argv);
-    vaend(argv,fmt);
+    va_end(argv);
 }
 
 void
 semwarn(const int lno, const char *fmt, ...)
 {
     va_list argv;
-    vastart(argv,fmt);
+    va_start(argv,fmt);
     (void)fprintf(stderr,"%s: %s line %d: ", progname, cdlname, lno);
     vdwarn(fmt,argv);
 }
@@ -69,7 +71,7 @@ void
 semerror(const int lno, const char *fmt, ...)
 {
     va_list argv;
-    vastart(argv,fmt);
+    va_start(argv,fmt);
     (void)fprintf(stderr,"%s: %s line %d: ", progname, cdlname, lno);
     vderror(fmt,argv);
     finalize_netcdf(1); /* immediately fatal */
@@ -116,7 +118,7 @@ nprintf(char* buffer, size_t size, const char *fmt, ...)
 {
     long written;
     va_list args;
-    vastart(args,fmt);
+    va_start(args,fmt);
     written = vsnprintf(buffer,size,fmt,args);
     if(written < 0 || written >= size) {
 	PANIC("snprintf failure");

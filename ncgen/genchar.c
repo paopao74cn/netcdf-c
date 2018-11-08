@@ -125,11 +125,11 @@ gen_chararrayr(Dimset* dimset, int dimindex,
 void
 gen_charattr(Datalist* data, Bytebuffer* databuf)
 {
-    gen_charvlen(data,databuf);
+    gen_charseq(data,databuf);
 }
 
 void
-gen_charvlen(Datalist* data, Bytebuffer* databuf)
+gen_charseq(Datalist* data, Bytebuffer* databuf)
 {
     int i;
     NCConstant* c;

@@ -53,6 +53,9 @@ typedef struct NCAUX_OFFSET{char* memory; ptrdiff_t offset;} NCAUX_OFFSET;
 /* Forward */
 static int reclaim_datar(int ncid, int xtype, size_t typesize, NCAUX_OFFSET*);
 static ptrdiff_t read_align(ptrdiff_t offset, size_t alignment);
+static size_t nctypealignment(int ncid, int type);
+static void compute_alignments(void);
+static int gettypeclass(int ncid, int xtype);
 
 #ifdef USE_NETCDF4
 static int ncaux_initialized = 0;
@@ -62,7 +65,6 @@ static int reclaim_vlen(int ncid, int xtype, int basetype, NCAUX_OFFSET* offset)
 static int reclaim_enum(int ncid, int xtype, int basetype, size_t, NCAUX_OFFSET* offset);
 static int reclaim_opaque(int ncid, int xtype, size_t size, NCAUX_OFFSET* offset);
 
-static void compute_alignments(void);
 static int computefieldinfo(struct NCAUX_CMPD* cmpd);
 #endif /* USE_NETCDF4 */
 
@@ -99,6 +101,7 @@ ncaux_reclaim_data(int ncid, int xtype, void* memory, size_t count)
         goto done; /* ok, do nothing */
     if((stat=nc_inq_type(ncid,xtype,NULL,&typesize))) goto done;
     offset.memory = (char*)memory; /* use char* so we can do pointer arithmetic */
+    offset.offset = 0;
     for(i=0;i<count;i++) {
 	if((stat=reclaim_datar(ncid,xtype,typesize,&offset))) /* reclaim one instance */
 	    break;
@@ -177,10 +180,11 @@ reclaim_vlen(int ncid, int xtype, int basetype, NCAUX_OFFSET* offset)
     /* Free up each entry in the vlen list */
     if(vl->p != NULL) {
 	NCAUX_OFFSET voffset;
+	unsigned int alignment = nctypealignment(ncid,xtype);
 	voffset.memory = vl->p;
 	voffset.offset = 0;
         for(i=0;i<vl->len;i++) {
-	    voffset.offset = read_align(voffset.offset,sizeof(nc_vlen_t));
+	    voffset.offset = read_align(voffset.offset,alignment);
 	    if((stat = reclaim_datar(ncid,basetype,basesize,&voffset))) goto done;
 	}
 	offset->offset += sizeof(nc_vlen_t);
@@ -220,12 +224,14 @@ reclaim_compound(int ncid, int xtype, size_t cmpdsize, size_t nfields, NCAUX_OFF
 
     /* Get info about each field in turn and reclaim it */
     for(fid=0;fid<nfields;fid++) {
+	unsigned int fieldalignment;
 	/* Get all relevant info about the field */
         if((stat = nc_inq_compound_field(ncid,xtype,fid,NULL,&fieldoffset, &fieldtype, &ndims, dimsizes))) goto done;
+	fieldalignment = nctypealignment(ncid,fieldtype);
         if((stat = nc_inq_type(ncid,fieldtype,NULL,&fieldsize))) goto done;
 	if(ndims == 0) {ndims=1; dimsizes[0]=1;} /* fake the scalar case */
 	/* Align to this field */
-	offset->offset = read_align(offset->offset,fieldoffset);
+	offset->offset = read_align(offset->offset,fieldalignment);
 	/* compute the total number of elements in the field array */
 	arraycount = 1;
 	for(i=0;i<ndims;i++) arraycount *= dimsizes[i];
@@ -521,11 +527,15 @@ compute_alignments(void)
 }
 
 static size_t
-nctypealignment(nc_type nctype)
+nctypealignment(int ncid, int xtype)
 {
     Alignment* align = NULL;
     int index = 0;
-    switch (nctype) {
+    if(!ncaux_initialized) {
+	compute_alignments();
+	ncaux_initialized = 1;
+    }
+    switch (xtype) {
       case NC_BYTE: index = UCHARINDEX; break;
       case NC_CHAR: index = CHARINDEX; break;
       case NC_SHORT: index = SHORTINDEX; break;
@@ -538,9 +548,20 @@ nctypealignment(nc_type nctype)
       case NC_INT64: index = LONGLONGINDEX; break;
       case NC_UINT64: index = ULONGLONGINDEX; break;
       case NC_STRING: index = PTRINDEX; break;
-      case NC_VLEN: index = NCVLENINDEX; break;
-      case NC_OPAQUE: index = UCHARINDEX; break;
-      default: assert(0);
+      default: {/* Presumably a user type */
+	int klass = gettypeclass(ncid,xtype);
+	switch (klass) {
+        case NC_VLEN: index = NCVLENINDEX; break;
+        case NC_OPAQUE: index = UCHARINDEX; break;
+        case NC_COMPOUND: {
+	   int fieldtype;
+	   /* get alignment of the first field of the compound */
+           (void)nc_inq_compound_field(ncid,xtype,0,NULL,NULL, &fieldtype, NULL, NULL);
+	   return nctypealignment(ncid,fieldtype); /* may recurse repeatedly */
+	} break;
+        default: assert(0);
+	}
+    } break;
     }
     align = &vec[index];
     return align->alignment;
@@ -598,14 +619,14 @@ computefieldinfo(struct NCAUX_CMPD* cmpd)
 	    field->alignment = 1;
 	    break;
 	case NC_ENUM:
-            field->alignment = nctypealignment(firsttype);
+            field->alignment = nctypealignment(cmpd->ncid,firsttype);
 	    break;	
 	case NC_VLEN: /*fall thru*/
 	case NC_COMPOUND:
-            field->alignment = nctypealignment(firsttype);
+            field->alignment = nctypealignment(cmpd->ncid,firsttype);
 	    break;
 	default:
-            field->alignment = nctypealignment(field->fieldtype);
+            field->alignment = nctypealignment(cmpd->ncid,field->fieldtype);
 	    break;
 	}
         offset += getpadding(offset,alignment);
@@ -618,6 +639,17 @@ computefieldinfo(struct NCAUX_CMPD* cmpd)
 done:
     return status;
 }
+
+static int
+gettypeclass(int ncid, int xtype)
+{
+    int klass = xtype;
+    if(xtype > NC_MAX_ATOMIC_TYPE) {
+        (void)nc_inq_user_type(ncid,xtype,NULL,NULL,NULL,NULL,&klass);
+    }
+    return klass;
+}
+
 #endif /*USE_NETCDF4*/
 
 

@@ -809,7 +809,6 @@ processattributes(void)
 	    asym->data = builddatalist(1);
 	    empty = emptystringconst(asym->lineno);
 	    dlappend(asym->data,empty);
-	    reclaimconstant(empty);
 	}
 	validateNIL(asym);
     }

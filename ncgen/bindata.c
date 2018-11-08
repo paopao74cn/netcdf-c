@@ -23,7 +23,7 @@ bin_charconstant(Generator* generator, Symbol* sym, Bytebuffer* buf, ...)
     /* Just transfer charbuf to codebuf */
     Bytebuffer* charbuf;
     va_list ap;
-    vastart(ap,buf);
+    va_start(ap,buf);
     charbuf = va_arg(ap, Bytebuffer*);
     va_end(ap);
     bbNull(charbuf);
@@ -141,7 +141,7 @@ bin_vlendecl(Generator* generator, Symbol* tsym, Bytebuffer* buf, int uid, size_
     va_list ap;
     Bytebuffer* vlenmem;
     nc_vlen_t ptr;
-    vastart(ap,count);
+    va_start(ap,count);
     vlenmem = va_arg(ap, Bytebuffer*);
     va_end(ap);
     ptr.len = count;
@@ -157,7 +157,7 @@ bin_vlenstring(Generator* generator, Symbol* sym, Bytebuffer* codebuf, int* uidp
     nc_vlen_t ptr;
     va_list ap;
     if(uidp) *uidp = ++bin_uid;
-    vastart(ap,sizep);
+    va_start(ap,sizep);
     vlenmem = va_arg(ap, Bytebuffer*);
     va_end(ap);
     ptr.len = bbLength(vlenmem);

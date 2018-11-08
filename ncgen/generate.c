@@ -361,7 +361,7 @@ generate_basetype(Symbol* tsym, NCConstant* con, Bytebuffer* codebuf, Datalist* 
         /* generate the nc_vlen_t instance*/
         vlenbuf = bbNew();
         if(tsym->typ.basetype->typ.typecode == NC_CHAR) {
-            gen_charvlen(data,vlenbuf);
+            gen_charseq(data,vlenbuf);
             generator->vlenstring(generator,tsym,vlenbuf,&uid,&count);
         } else {
             generator->listbegin(generator,tsym,NULL,LISTVLEN,data->length,codebuf,&uid);

@@ -164,7 +164,7 @@ extern NCConstant nilconstant;
 
 /* From genchar.c */
 void gen_charattr(Datalist*, Bytebuffer*);
-void gen_charvlen(Datalist*, Bytebuffer*);
+void gen_charseq(Datalist*, Bytebuffer*);
 void gen_chararray(struct Dimset*, int, Datalist*, Bytebuffer*, Datalist* fillsrc);
 
 typedef enum ListClass {

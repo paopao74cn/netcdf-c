@@ -13,25 +13,26 @@
 #undef TRACE
 
 /* Forward*/
-static void genbin_defineattr(Symbol* asym);
-static void genbin_definevardata(Symbol* vsym);
+static int genbin_defineattr(Symbol* asym);
+static int genbin_definevardata(Symbol* vsym);
 static int  genbin_write(Generator*,Symbol*,Bytebuffer*,int,size_t*,size_t*);
 static int genbin_writevar(Generator*,Symbol*,Bytebuffer*,int,size_t*,size_t*);
 static int genbin_writeattr(Generator*,Symbol*,Bytebuffer*,int,size_t*,size_t*);
 #ifdef USE_NETCDF4
-static void genbin_deftype(Symbol* tsym);
-static void genbin_definespecialattributes(Symbol* var);
+static int genbin_deftype(Symbol* tsym);
+static int genbin_definespecialattributes(Symbol* var);
 #endif
 
 /*
  * Generate C code for creating netCDF from in-memory structure.
  */
 void
-gen_netcdf(const char *filename)
+genbin_netcdf(void)
 {
     int stat, ncid;
     int idim, ivar, iatt;
     int ndims, nvars, natts, ngatts;
+    const char* filename = rootgroup->file.filename;
 
 #ifdef USE_NETCDF4
     int ntyps, ngrps, igrp;
@@ -192,7 +193,7 @@ genbin_defineglobalspecials(void)
 }
 #endif /*0*/
 
-static void
+static int
 genbin_definespecialattributes(Symbol* var)
 {
     int stat = NC_NOERR;
@@ -264,12 +265,13 @@ genbin_definespecialattributes(Symbol* var)
         }
         check_err(stat,__LINE__,__FILE__);
     }
+    return stat;
 }
 #endif /*USE_NETCDF4*/
 
 
 void
-cl_netcdf(void)
+genbin_close(void)
 {
     int stat;
     stat = nc_close(rootgroup->nc_id);
@@ -280,7 +282,7 @@ cl_netcdf(void)
 /*
 Generate type definitions
 */
-static void
+static int
 genbin_deftype(Symbol* tsym)
 {
     unsigned long i;
@@ -365,10 +367,11 @@ genbin_deftype(Symbol* tsym)
         break;
     default: panic("definectype: unexpected type subclass");
     }
+    return stat;
 }
 #endif /*USE_NETCDF4*/
 
-static void
+static int
 genbin_defineattr(Symbol* asym)
 {
     int stat = NC_NOERR;
@@ -419,7 +422,7 @@ genbin_definevardata(Symbol* vsym)
     if((stat=binary_reclaim_data(asym->typ.basetype,data,len)))
         goto done;
 #else
-    if(vsym->data == NULL) return;
+    if(vsym->data == NULL) goto done;
     databuf = bbNew();
     generator_reset(bin_generator,NULL);
     generate_vardata(vsym,bin_generator,(Writer)genbin_write,databuf);
